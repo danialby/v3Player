@@ -1,432 +1,97 @@
+
+<script setup>
+import Recycler from "@/components/Recycler.vue";
+import ThePlayer from "@/components/player/components/thePlayer.vue";
+import {app} from "@/main";
+app.provide('thePlayer',ThePlayer)
+import{ ref} from "vue";
+      defineProps({
+        data: {
+          type: Object
+        }
+      })
+
+      const advTrack = ref(null)
+      const retryCount = ref(0)
+      const advData = ref(null)
+      const advAudio = ref(null)
+      const historyTouchY = ref([])
+      const historyTouchStart = ref(null)
+      const isShowLyrics = ref(false)
+      const isMinimized = ref(false)
+      const slideBar = ref(0)
+      const progress = ref(0)
+      const nextAudio = ref(null)
+      const nextAudioElement = ref(null)
+      const userRangeClicked = ref(false)
+      const fetchUrl = ref(null)
+      const lyricFS = ref(null)
+      const lyricOpenable = ref(true)
+      const pointerDisabled = ref(false)
+      const sleepTime = ref(0)
+      const downloadLimitDialogData = ref(
+          {
+        headerText: 'ویژه شوید',
+        styleObject: {
+          backColor: 'linear-gradient(180deg, #3D3D3D 0%, #282828 100%)',
+        },
+        bodyContent: {
+          text: 'ظرفیت دانلود روزانه ی شما به اتمام رسیده است (7 دانلود برای کاربران عادی).برای دانلود نامحدود ویژه شوید.',
+          image: 'downloadLimit.svg',
+          imageSize: '150px',
+          downloadLimitTitle: true
+        },
+        Buttons: [
+          {
+            text: 'ویژه شوید',
+            type: 'filled',
+            action: {
+              actionType: 'emit'
+            }
+          }
+        ],
+      }
+      )
+
+
+import {storeToRefs} from "pinia";
+import {melodify} from "@/store";
+const melodifyStore = melodify()
+const {
+  playerData,playerCheckedItems,playerTracks,playerIndex,playerQuery,playerQueryParams
+
+} = storeToRefs(melodifyStore)
+</script>
+
 <template>
   <div id="playerContainer" class="playerContainer">
     <div class="fit-16 m-auto" id="Player">
       <div class="topBoxContainer" id="PlayerTopBox">
-<!--        <div class="playerBack"></div>-->
-<!--        <div :style="{backgroundColor:$store.state.playerData?$store.state.playerData.background_color:null}" class="back"></div>-->
-<!--        <span class="header" id="header">-->
-<!--          <img draggable="false" @click="closeSheet"-->
-<!--               src="@/assets/icons/playerTopBtn.svg"/>-->
-<!--        </span>-->
-
-
         <div class="playerWrapper fit-16 m-auto">
-
-<!--          <advertise-top-box-->
-<!--              v-if="$store.state.playerAdvertiseData"-->
-<!--              :data="$store.state.playerAdvertiseData && !lyricFS">-->
-<!--          </advertise-top-box>-->
-<!--          <player-top-box-->
-<!--              v-if="$store.state.playerData && !$store.state.playerAdvertiseData  && !lyricFS"-->
-<!--              :data="$store.state.playerData">-->
-<!--          </player-top-box>-->
-
-
-<!--          <adv-player ref="advPlayer"-->
-<!--                      v-if="advTrack"-->
-<!--                      :advTrack="advTrack">-->
-<!--          </adv-player>-->
-          <the-player ref="thePlayer"
-                      v-show="!$store.state.playerAdvertiseData">
+          <the-player ref="thePlayer">
           </the-player>
-
         </div>
-
-<!--        <bottom-box-->
-<!--            v-if="$store.state.playerData && !$store.state.playerAdvertiseData  && !lyricFS"-->
-<!--            :data="$store.state.playerData"-->
-<!--            :sleep-time="sleepTime">-->
-<!--        </bottom-box>-->
-<!--        <advertise-bottom-box-->
-<!--            v-if="$store.state.playerAdvertiseData  && !lyricFS"-->
-<!--            :data="$store.state.playerAdvertiseData" />-->
-<!--        <lyric-in-player-->
-<!--            v-if="$store.state.playerData && $store.state.playerData.lyric.has_lyric &&-->
-<!--                    !$store.state.playerAdvertiseData && !lyricFS"-->
-<!--            ref="lyricInPlayer"-->
-<!--            :key="$store.state.playerData?$store.state.playerData.id:0"-->
-<!--            :track-data="$store.state.playerData"-->
-<!--            :data="$store.state.playerLyrics"-->
-<!--            :seek-time="$refs.thePlayer.playerCurrentTime"-->
-<!--            :current-time="$refs.thePlayer.playbackTime"-->
-<!--            :duration="$refs.thePlayer.playerDuration"-->
-<!--            :rawDuration="$refs.thePlayer.rawDuration"-->
-<!--            :isPlaying="$refs.thePlayer.isPlaying"-->
-<!--            :back-color="$store.state.playerData.background_color"-->
-<!--            :limitation_data="$store.state.lyric_limitation_data"-->
-<!--            :isLoadingLyrics="$store.state.isLoadingLyrics">-->
-<!--        </lyric-in-player>-->
-<!--        <lyric-ui-->
-<!--            v-if="$store.state.playerData && $store.state.playerData.lyric.has_lyric  &&-->
-<!--                    !$store.state.playerAdvertiseData && lyricFS"-->
-<!--            :key="Math.round($refs.thePlayer.rawDuration)"-->
-<!--            ref="lyricUI"-->
-<!--            :track-data="$store.state.playerData"-->
-<!--            :data="$store.state.playerLyrics"-->
-<!--            :seek-time="$refs.thePlayer.playerCurrentTime"-->
-<!--            :current-time="$refs.thePlayer.playbackTime"-->
-<!--            :duration="$refs.thePlayer.playerDuration"-->
-<!--            :rawDuration="$refs.thePlayer.rawDuration"-->
-<!--            :isPlaying="$refs.thePlayer.isPlaying"-->
-<!--            :playerDisabled="$refs.thePlayer.playerDisabled"-->
-<!--            :back-color="$store.state.playerData.background_color"-->
-<!--            :limitation_data="$store.state.lyric_limitation_data"-->
-<!--            :sleep-time="sleepTime"-->
-<!--            :isLoadingLyrics="$store.state.isLoadingLyrics">-->
-<!--        </lyric-ui>-->
         <Recycler id="playerData"
                   ref="playerData"
-                  :checked_items="$store.state.playerCheckedItems"
-                  :data="$store.state.playerTracks.tracks"
-                  :end="$store.state.playerTracks?$store.state.playerTracks.end:true"
-                  :meta="$store.state.playerTracks"
-                  :playingIndex="$store.state.playerIndex"
-                  :query="$store.state.playerQuery"
-                  :queryParams="$store.state.playerQueryParams"
+                  :checked_items="playerCheckedItems"
+                  :data="playerTracks.tracks"
+                  :end="playerTracks?playerTracks.end:true"
+                  :meta="playerTracks"
+                  :playingIndex="playerIndex"
+                  :query="playerQuery"
+                  :queryParams="playerQueryParams"
                   class="playerData"
                   from="player"
                   storeCommand="setPlayerTracks"
                   theComponent="Music"
-                  v-if="$store.state.playerData && $store.state.playerTracks  && !lyricFS"
+                  v-if="playerData && playerTracks  && !lyricFS"
                   :style="'top:35vh;'"
         >
         </Recycler>
       </div>
-<!--      <VueBottomSheet id="lyricUISheet"-->
-<!--                      v-if="$store.state.playerData &&  !$store.state.playerAdvertiseData"-->
-<!--                      ref="lyricUISheet"-->
-<!--                      :click-to-close="false"-->
-<!--                      :swipe-able="false"-->
-<!--                      :is-full-screen="true"-->
-<!--                      :overlay="true"-->
-<!--                      max-height="100vh"-->
-<!--                      overlay-color="#0000004D"-->
-<!--                      @closed="closeLyrics">-->
-<!--        <lyric-ui-->
-<!--            v-if="$store.state.playerData.lyric.has_lyric"-->
-<!--            :key="Math.round($refs.thePlayer.rawDuration)"-->
-<!--            ref="lyricUI"-->
-<!--            :track-data="$store.state.playerData"-->
-<!--            :data="$store.state.playerLyrics"-->
-<!--            :seek-time="$refs.thePlayer.playerCurrentTime"-->
-<!--            :current-time="$refs.thePlayer.playbackTime"-->
-<!--            :duration="$refs.thePlayer.playerDuration"-->
-<!--            :rawDuration="$refs.thePlayer.rawDuration"-->
-<!--            :isPlaying="$refs.thePlayer.isPlaying"-->
-<!--            :playerDisabled="$refs.thePlayer.playerDisabled"-->
-<!--            :back-color="$store.state.playerData.background_color"-->
-<!--            :limitation_data="$store.state.lyric_limitation_data"-->
-<!--            :sleep-time="sleepTime">-->
-<!--        </lyric-ui>-->
-<!--      </VueBottomSheet>-->
-
-<!--      <m-dialog-->
-<!--          ref="downloadLimitDialog"-->
-<!--          :data="downloadLimitDialogData"-->
-<!--          :styleObject="downloadLimitDialogData.styleObject"-->
-<!--          @whatToDo="downloadLimitDialogAction"-->
-<!--      >-->
-<!--      </m-dialog>-->
     </div>
   </div>
 </template>
-
-<script>
-    // import VueBottomSheet from "@webzlodimir/vue-bottom-sheet";
-    import Recycler from "@/components/includes/Elements/Recycler.vue";
-    // import GotoTopBtn from "../includes/Elements/GotoTopBtn.vue";
-    // import lyricUi from "@/components/player/components/lyricUi.vue";
-    // import lyricInPlayer from "@/components/player/components/lyricInPlayer.vue";
-    // import AdvertiseBox from "@/components/player/components/advertiseBox.vue";
-    // import PlayerTopBox from "@/components/player/components/playerTopBox.vue";
-    import ThePlayer from "@/components/player/components/thePlayer.vue";
-    // import BottomBox from "@/components/player/components/bottomBox.vue";
-    // import ButtonClickable from "@/components/includes/Elements/ButtonClickable.vue";
-    // import MDialog from "@/components/includes/Elements/mDialog";
-    // import AdvertiseTopBox from "@/components/player/components/Advertise/advertiseTopBox.vue";
-    // import AdvPlayer from "@/components/player/components/Advertise/advPlayer.vue";
-    // import AdvertiseBottomBox from "@/components/player/components/Advertise/advertiseBottomBox.vue";
-    // let middle
-    // let Player
-    // let goToTopPlayer
-    export default {
-      name: "BigPlayer",
-      components: {
-        // AdvertiseBottomBox,
-        // AdvPlayer,
-        // AdvertiseTopBox,
-        // MDialog,
-        // ButtonClickable,
-        // BottomBox,
-        ThePlayer,
-        // PlayerTopBox,
-        // AdvertiseBox,
-        // GotoTopBtn,
-        Recycler,
-        // lyricUi,
-        // lyricInPlayer,
-        // VueBottomSheet
-      },
-      // mixins: [VueHowler],
-      props: {
-        data: {
-          type:Object
-        },
-        lyricLimitationData: Object
-      },
-      data: () => {
-        return {
-          advTrack:null,
-          retryCount: 0,
-          advData: null,
-          advAudio: null,
-          historyTouchY: [],
-          historyTouchStart: null,
-          isShowLyrics: false,
-          isMinimized: false,
-          slideBar: 0,
-          progress: 0,
-          nextAudio: null,
-          nextAudioElement: null,
-          userRangeClicked: false,
-          fetchUrl: null,
-          lyricFS: false,
-          lyricOpenable: true,
-          pointerDisabled: false,
-          sleepTime: 0,
-          downloadLimitDialogData: {
-            headerText: 'ویژه شوید',
-            styleObject: {
-              backColor: 'linear-gradient(180deg, #3D3D3D 0%, #282828 100%)',
-            },
-            bodyContent: {
-              text: 'ظرفیت دانلود روزانه ی شما به اتمام رسیده است (7 دانلود برای کاربران عادی).برای دانلود نامحدود ویژه شوید.',
-              image: 'downloadLimit.svg',
-              imageSize: '150px',
-              downloadLimitTitle : true
-            },
-            Buttons: [
-              {
-                text: 'ویژه شوید',
-                type: 'filled',
-                action: {
-                  actionType: 'emit'
-                }
-              }
-            ],
-          },
-        }
-      },
-      watch: {
-        lyricFS() {
-          if(this.lyricFS === false) {
-            this.closeLyrics()
-          }
-        }
-      },
-      methods: {
-        // downloadLimitDialogAction() {
-        //   this.$refs.downloadLimitDialog.close()
-        //   let backState
-        //   if(this.$root.$refs.lyricUI) backState = 'lyricsOpened'
-        //   else backState = 'playerOpened'
-        //   this.$utils.limitAction(backState)
-        // },
-        // toggleLyrics() {
-        //   this.$store.commit('setPlayerLyrics', null)
-        //   Promise.all([this.getLyrics()])
-        //       .then(() => {
-        //         this.$store.dispatch('setLyricsLoading',false)
-        //       })
-        // },
-        // async getLyrics() {
-        //   await this.$store.dispatch('setLyricsLoading',true)
-        //   await this.$store.dispatch('get_Data', {
-        //     api_version: 'v7/',
-        //     api_command: 'getTrackLyrics',
-        //     params: {
-        //       track_id: this.$store.state.playerData.id,
-        //       is_demo: this.$store.state.playerData.is_demo ? 1 : 0
-        //     },
-        //     store_command: {
-        //       "command": 'setPlayerLyrics',
-        //       "addedParams": this.$store.state.user.id + '-' + this.$store.state.playerData.id
-        //     }
-        //   })
-        // },
-        // toggleScrollBtn() {
-        //   let heightDif = middle.offsetHeight - (middle.offsetHeight - Player.scrollTop).toPrecision(2)
-        //   if (heightDif > 600 && goToTopPlayer.classList.contains('hide'))
-        //       {
-        //         goToTopPlayer.classList.remove('hide')
-        //       } else if (heightDif < 600 && !goToTopPlayer.classList.contains('hide'))
-        //       {
-        //         goToTopPlayer.classList.add('hide')
-        //       }
-        // },
-        //
-        // isInViewport(el) {
-        //   const rect = el.getBoundingClientRect();
-        //   return (
-        //       rect.top >= 0 &&
-        //       rect.left >= 0 &&
-        //       rect.bottom <= (window.innerHeight + 50
-        //           ||
-        //           document.documentElement.clientHeight + 50) &&
-        //       rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-        //
-        //   );
-        // },
-        // loadMoreHandler(container) {
-        //   middle = document.getElementById('Middle')
-        //   Player = document.getElementById("Player")
-        //   goToTopPlayer = document.getElementById("goToTopPlayer")
-        //   if (document.getElementById('Player').scrollTop > 10 && (!this.$store.state.playerLyrics && !this.$store.state.isLoadingLyrics)) {
-        //     if (this.$store.state.playerData.lyric.has_lyric) {
-        //       this.toggleLyrics()
-        //     }
-        //   }
-        //   if (document.getElementById('Player').scrollTop > 600)
-        //   {
-        //     this.toggleScrollBtn()
-        //     if(this.$refs.playerData) this.$refs.playerData.loadMoreHandler(container)
-        //   }
-        //
-        // },
-        // closeSheet() {
-        //   this.isMinimized = true
-        //   this.$utils.closeSheet(this.$root.$refs.player)
-        // },
-        // closeLyrics() {
-        //   setTimeout(() => {
-        //     this.lyricOpenable = true
-        //     this.pointerDisabled = false
-        //   }, 500)
-        // },
-        //Telegram
-        // async checkTGStatus() {
-        //   await this.$store.dispatch('get_Data',
-        //       {
-        //         api_command: 'checkIfTelegramConnected',
-        //         params: {},
-        //         store_command: {
-        //           "command": 'setTGStatus',
-        //         }
-        //       })
-        // },
-        // async startTGProcess(no_track, change) {
-        //   if (!this.$store.state.initialData.telegram_data.has_connected) {
-        //     // Need Telegram Check
-        //     this.$root.$refs.vToaster.openToast('در حال انتقال به تلگرام... لطفاً صبور باشید')
-        //     this.isCheckingStatus = true
-        //     await this.$store.dispatch('get_Data',
-        //         {
-        //           api_command: 'generateTelegramLink',
-        //           params: {
-        //             track_id: no_track ? null : this.$store.state.playerData.id,
-        //             quality: this.$store.state.user.streaming_quality
-        //           },
-        //           store_command: {
-        //             "command": 'goTGLink',
-        //           }
-        //         }).then(() => {
-        //       setTimeout(() => {
-        //         if (this.$device.isIOS) {
-        //           window.open(this.$store.state.tgLink.link, '_top')
-        //         } else {
-        //           window.open(this.$store.state.tgLink.link, '_blank')
-        //         }
-        //       }, 50)
-        //       this.isCheckingStatus = false
-        //       this.$utils.closeSheet(this.$refs.connectTelegramSheet)
-        //     })
-        //         .catch((error) => {
-        //           this.isCheckingStatus = false
-        //           console.log(error)
-        //         })
-        //   } else {
-        //     if (change) {
-        //       this.isCheckingStatus = true
-        //       await this.$store.dispatch('get_Data',
-        //           {
-        //             api_command: 'unlinkTelegram',
-        //             params: {},
-        //             store_command: {
-        //               "command": '',
-        //             }
-        //           }).then(() => {
-        //         this.$store.commit('unsetTGStatus', null)
-        //         Promise.all([this.startTGProcess(true, false)]).then(() => {
-        //           this.$store.commit('setTGUnlinked', true)
-        //           this.isCheckingStatus = false
-        //           this.$utils.closeSheet(this.$refs.connectTelegramSheet)
-        //         })
-        //       })
-        //           .catch((error) => {
-        //             this.isCheckingStatus = false
-        //             console.log(error)
-        //           })
-        //     } else {
-        //       this.isCheckingStatus = true
-        //       this.isSendingToTelegram = true
-        //       await this.$store.dispatch('get_Data',
-        //           {
-        //             api_command: 'sendMusicToTelegram',
-        //             params: {
-        //               track_id: this.$store.state.playerData.id,
-        //               quality: this.$store.state.download_quality
-        //             },
-        //             store_command: {
-        //               "command": 'musicSentToTelegram',
-        //             }
-        //           }).then(() => {
-        //         if (this.$store.state.telegramLimitationObj) {
-        //           this.downloadLimitDialogData.bodyContent.text = this.$store.state.telegramLimitationObj.message
-        //           this.openDownloadLimitDialog()
-        //         } else {
-        //           this.isSendingToTelegram = false
-        //           this.$utils.closeSheet(this.$root.$refs.downloadSheet)
-        //           this.$root.$refs.vToaster.openToast('موزیک به تلگرام ارسال شد...')
-        //         }
-        //
-        //         this.$store.commit('musicSentToTelegram', null)
-        //         this.isCheckingStatus = false
-        //         this.$utils.closeSheet(this.$root.$refs.downloadSheet)
-        //       })
-        //     }
-        //
-        //   }
-        //
-        // },
-        // async openDownloadSheet() {
-        //   let DQisSet = localStorage.getItem('download_quality')
-        //   if (!this.$store.state.playerData.is_demo) {
-        //     if (!DQisSet) {
-        //       this.$utils.openSheet('userDownloadQualitySheet',this.$root.$refs.app)
-        //     } else {
-        //       this.$utils.openSheet(this.$refs.downloadSheet)
-        //       if (!this.$store.state.initialData.telegram_data.has_connected) {
-        //         await this.checkTGStatus()
-        //       } else {
-        //         console.log('telegram is connected')
-        //       }
-        //     }
-        //
-        //   } else {
-        //     this.$root.$refs.vToaster.openToast(
-        //         'برای دانلود این آهنگ باید کاربر ویژه شوید!'
-        //     )
-        //   }
-        // },
-        // openDownloadLimitDialog() {
-        //   let downloadLimitations = JSON.parse(localStorage.getItem("limitations")).filter(item => item.limitation_key.includes('download_per_day')).reverse()[0]
-        //   this.downloadLimitDialogData.bodyContent.text = downloadLimitations.limitation_data.message
-        //   this.$refs.downloadLimitDialog.openDialog()
-        // },
-      }
-    }
-
-</script>
 
 
 <style>

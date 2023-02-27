@@ -1,9 +1,9 @@
 <script setup>
-import TheWelcome from '../components/TheWelcome.vue'
+import BigPlayer from "@/components/player/BigPlayer.vue";
 </script>
 
 <template>
   <main>
-    <TheWelcome />
+    <BigPlayer></BigPlayer>
   </main>
 </template>
