@@ -1,168 +1,95 @@
 
-<script setup>
-import {ref,onMounted} from "vue"
+<script>
+
+
+import {ref, onMounted} from "vue"
 import axios from "axios";
 import {db} from "@/db";
 import {Howl} from 'howler';
+import {storeToRefs} from "pinia";
+import {playerStore} from "@/store";
 let self
 let userObject
 let seek
 let navTimer
 let retryTimer
 let animationFrame
-
-  defineProps({
-    data:Object
-  })
-
-
-const isDragging = ref(false);
-const isDistrupted = ref(false);
-const retryCount = ref(0);
-const advData = ref(null);
-const advAudio = ref(null);
-const historyTouchY = ref([]);
-const historyTouchStart = ref(null);
-const isShowLyrics = ref(false);
-const isMinimized = ref(false);
-const repeatOne = ref(false);
-const repeatAll = ref(false);
-const shuffleEnabled = ref(false);
-const startOfPlaylist = ref(false);
-const endOfPlaylist = ref(false);
-const isChanging = ref(false);
-const isPlaying = ref(false);
-const rawDuration = ref(0);
-const playingObject = ref({});
-const playingElement = ref(null);
-const playingData = ref(null);
-const playerDuration = ref("00:00");
-const playerCurrentTime = ref("00:00");
-const bufferedAudio = ref(0);
-const playerDisabled = ref(false);
-const playerDraggable = ref(false);
-const stopPlaying = ref(false);
-const playbackTime = ref(0);
-const navigateTimer = ref(false);
-const slideBar = ref(0);
-const nextAudio = ref(null);
-const nextAudioElement = ref(null);
-const sliderCustomize = ref({"processStyle":{"backgroundColor":"var(--Accent)"},"bgStyle":{"backgroundColor":"rgba(0,0,0,0.2)"},"dotStyle":{"backgroundColor":"var(--Accent)","zIndex":10000},"disabledStyle":{"padding":0,"opacity":1,"backgroundColor":"rgba(0,0,0,0.2)"}});
-const userRangeClicked = ref(false);
-const fetchUrl = ref(null);
-
-
-import {getCurrentInstance} from "vue";
-const app = getCurrentInstance()
-onMounted(() => {
-  let userObject = storeToRefs(devUserObject["09353264254"])
-})
-
-
-
-
-import {storeToRefs} from "pinia";
-import {melodify} from "@/store";
-const melodifyStore = melodify()
-const {
-  playerIndex,playerMeta, playerTracks, playerData, playerAdvertiseData, playerLyrics,listenedTracks,cdnUrl,devUserObject
-} = storeToRefs(melodifyStore)
-const {
-setFetchUrl
-} = melodifyStore
-
-
-async function downloadItem(id,src) {
-      const client = axios.create({
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          "device_id": localStorage.getItem('device_id'),
-          "device_name": localStorage.getItem('device_name'),
-          'user-id': userObject.user.id,
-          'authorization': userObject.token,
-          'device_token': localStorage.getItem('device_token'),
-          'platform': this.$device.os_name.name,
-          'pwa-version': this.$store.state.pwa_version
+export default {
+  props:{
+          data:Object
+        },
+  data() {
+    return {
+      isDragging: false,
+      isDistrupted: false,
+      retryCount: 0,
+      advData: null,
+      advAudio: null,
+      historyTouchY: [],
+      historyTouchStart: null,
+      isShowLyrics: false,
+      isMinimized: false,
+      repeatOne: false,
+      repeatAll: false,
+      shuffleEnabled: false,
+      startOfPlaylist: false,
+      endOfPlaylist: false,
+      isChanging: false,
+      isPlaying: false,
+      rawDuration: 0,
+      playingObject: {},
+      playingElement: null,
+      playingData: null,
+      playerDuration: '00:00',
+      playerCurrentTime: '00:00',
+      player_timer:null,
+      bufferedAudio:0,
+      playerDisabled: false,
+      playerDraggable: false,
+      stopPlaying:false,
+      playbackTime: 0,
+      navigateTimer: false,
+      slideBar: 0,
+      nextAudio: null,
+      nextAudioElement: null,
+      sliderCustomize: {
+        processStyle: {
+          backgroundColor: 'var(--Accent)'
+        },
+        bgStyle: {
+          backgroundColor: 'rgba(0,0,0,0.2)'
+        },
+        dotStyle: {
+          backgroundColor: 'var(--Accent)',
+          zIndex:10000
+        },
+        disabledStyle: {
+          padding: 0,
+          opacity: 1,
+          backgroundColor: 'rgba(0,0,0,0.2)'
         }
-      })
-
-      await client.get(src, {
-        responseType: 'arraybuffer',
-      })
-          .then(async(res) => {
-            const blob = new Blob([res.data], {
-              type: 'audio/mp3',
-            });
-            try {
-              // Add listened track!
-              await db.lsTracks.add({
-                id:id,
-                item: self.itemData,
-                file: blob
-              });
-              listenedTracks.push(self.itemData)
-            } catch (error) {
-              console.log(`Failed to add: ${error}`)
-            }
-            // set(id,{item:this.$store.state.playerData,file:blob},lsTracks).then(() => {
-            //   // this.$store.state.listenedTracks.push(id)
-            // })
-            // let listenedTracksList = localStorage.getItem('listenedTracksList') ? JSON.parse(localStorage.getItem('listenedTracksList')) : []
-            // let updatedListenedTracksList = listenedTracksList.filter((item) => item.id !== id)
-            // updatedListenedTracksList.unshift(this.$store.state.playerData)
-            // localStorage.setItem('listenedTracksList', JSON.stringify(updatedListenedTracksList))
-            // console.log(id+' is in listenedTracksList now')
-          })
-          .catch((error) => {
-            console.log('there is a problem', error)
-          })
-
+      },
+      userRangeClicked: false,
+      fetchUrl: null,
     }
-function processNext() {
-      if(playerTracks.tracks[playerIndex + 1] &&
-          this.$store.state.listenCount !== this.advertise_data.ads_limit_counts) {
-        let nextTrackElement = document.getElementById(playingObject.value.next)
-        let nextTrackNeeded = nextTrackElement === null
-        if (!this.nextAudio && !this.isChanging && nextTrackNeeded && !playerAdvertiseData) {
-          let theMp3 =
-              !playerTracks.tracks[playerIndex + 1].is_demo ?
-                  playerTracks.tracks[playerIndex + 1].mp3s.filter(el => el.quality === this.$store.state.user.streaming_quality)
-                  : playerTracks.tracks[playerIndex + 1].mp3s[0].name
-          setFetchUrl(cdnUrl + theMp3[0].name + '?type=pwa&melodify_token=' + userObject.user.id + '&download_token=' + userObject.token)
-          if (!playerTracks.tracks[playerIndex + 1].is_demo) {
-            if (!this.shuffleEnabled) {
-              console.log('nextAudio :' + theMp3[0].name)
-              this.nextAudio = theMp3[0].name
-              nextAudioElement.value = document.createElement('audio')
-              nextAudioElement.value.setAttribute('id', playingObject.value.next)
-              nextAudioElement.value.setAttribute('crossorigin', 'anonymous')
-              nextAudioElement.value.src = this.$store.state.cdnUrl + theMp3[0].name + '?type=pwa&melodify_token=' + userObject.user.id + '&download_token=' + userObject.token
-              nextAudioElement.value.setAttribute('preload', 'metadata')
-              nextAudioElement.value.setAttribute('crossorigin', 'anonymous')
-              // let body =
-              nextAudioElement.value.load()
-              document.body.appendChild(nextAudioElement.value)
-            }
-          }
-        }
-      }
-    }
-async function togglePlay() {
+  },
+
+
+
+    const togglePlay = async () => {
       // if(!this.playerDisabled) {
-      if (this.playingElement) {
-        if (this.playingElement.playing()) {
-          await this.playingElement.pause()
-          this.isPlaying = false
+      if (playingElement.value) {
+        if (playingElement.value.playing()) {
+          await playingElement.value.pause()
+          isPlaying.value = false
         } else {
-          if (!playerAdvertiseData) await this.$store.dispatch('setMediaSessionData')
-          await this.playingElement.play()
-          this.isPlaying = true
+          if (!playerAdvertiseData) await setMediaSessionData()
+          await playingElement.value.play()
+          isPlaying.value = true
         }
       } else {
 
-        await this.playItem(
+        await playItem(
             this.$store.state.playerParams.tracks,
             this.$store.state.playerParams.item,
             this.$store.state.playerParams.index,
@@ -174,449 +101,67 @@ async function togglePlay() {
       }
       // }
     }
-function setTextAnimation() {
-
-      //big player elements
-      let playerDataTitle = document.getElementById('playerDataTitle')
-      let playerDataTitleContainer = document.getElementById('playerDataTitleContainer')
-      let infoContainer = document.getElementById('infoContainer')
-      let info = document.getElementById('info')
-
-      //mini player elements
-      let titleContainer = document.getElementById('titleContainer')
-      let miniPlayerTitle = document.getElementById('miniPlayerTitle')
-      let miniPlayerArtistName = document.getElementById('miniPlayerArtistName')
-
-
-      //lyric player elements
-      // let lyricTitleContainer = document.getElementById('lyricTrackTitle')
-      // let miniPlayerTitle = document.getElementById('miniPlayerTitle')
-      // let lyricArtistName = document.getElementById('miniPlayerArtistName')
-
-
-
-      // console.log('big-title :','parent:',playerDataTitleContainer.offsetWidth,'child:',playerDataTitle.offsetWidth)
-      // console.log('big-info:','parent:',infoContainer.offsetWidth,'child:',info.offsetWidth)
-      // console.log('mini-title :','parent:',titleContainer.offsetWidth,'child:',miniPlayerTitle.offsetWidth)
-      // console.log('mini-artist:','parent:',titleContainer.offsetWidth,'child:',miniPlayerArtistName.offsetWidth)
-
-      //mini player check widths
-      if ((titleContainer.offsetWidth - 30) < miniPlayerTitle.offsetWidth) {
-        miniPlayerTitle.style.setProperty('--miniPlayerTitle-scroll-start', miniPlayerTitle.offsetWidth + "px")
-        miniPlayerTitle.style.setProperty('--miniPlayerTitle-scroll-out', -miniPlayerTitle.offsetWidth + "px")
-        miniPlayerTitle.classList.add('animateMiniPlayerTitle')
-        // console.log('mini-Title-scroll-out:',info.style.getPropertyValue('--miniPlayerTitle-scroll-out'))
-      } else if (miniPlayerTitle.classList.contains('animateMiniPlayerTitle')) {
-        miniPlayerTitle.classList.remove('animateMiniPlayerTitle')
-      }
-
-      if ((titleContainer.offsetWidth - 30) < miniPlayerArtistName.offsetWidth) {
-        miniPlayerArtistName.style.setProperty('--miniPlayerArtist-scroll-start', miniPlayerArtistName.offsetWidth + "px")
-        miniPlayerArtistName.style.setProperty('--miniPlayerArtist-scroll-out', -miniPlayerArtistName.offsetWidth + "px")
-        miniPlayerArtistName.classList.add('animateMiniPlayerArtist')
-        // console.log('mini-artist-scroll-out:',info.style.getPropertyValue('--miniPlayerArtist-scroll-out'))
-      } else if (miniPlayerArtistName.classList.contains('animateMiniPlayerArtist')) {
-        miniPlayerArtistName.classList.remove('animateMiniPlayerArtist')
-      }
-
-
-      //big player check widths
-      if (infoContainer.offsetWidth <= info.offsetWidth) {
-        info.style.setProperty('--info-scroll-out', -info.offsetWidth + "px")
-        info.style.setProperty('--info-scroll-start', info.offsetWidth + "px")
-        info.classList.add('animateInfo')
-        info.style.opacity = 1
-        infoContainer.classList.add('hasGradient')
-        // console.log(info.style.getPropertyValue('--info-scroll-out'))
-      } else if (infoContainer.offsetWidth > info.offsetWidth) {
-        info.classList.remove('animateInfo')
-        info.style.opacity = 1
-        infoContainer.classList.remove('hasGradient')
-      } else {
-        info.style.opacity = 1
-      }
-
-
-      if (playerDataTitleContainer.offsetWidth <= playerDataTitle.offsetWidth) {
-        playerDataTitle.style.setProperty('--title-scroll-out', -playerDataTitle.offsetWidth + "px")
-        playerDataTitle.style.setProperty('--title-scroll-start', playerDataTitle.offsetWidth + "px")
-        playerDataTitleContainer.classList.add('hasGradient')
-        playerDataTitle.classList.add('animateTitleText')
-        playerDataTitle.style.opacity = 1
-        // console.log(playerDataTitle.style.getPropertyValue('--title-scroll-out'))
-      } else if (playerDataTitleContainer.offsetWidth > playerDataTitle.offsetWidth) {
-        playerDataTitleContainer.classList.remove('hasGradient')
-        playerDataTitle.classList.remove('animateTitleText')
-        playerDataTitle.style.opacity = 1
-      } else {
-        playerDataTitle.style.opacity = 1
-      }
-    }
-function setEventListeners(track) {
-      const actionHandlers = [
-        ['play', async() => {
-          await self.playingElement.play()
-        }],
-        ['pause', async () => {
-          await self.playingElement.pause()
-        }],
-        ['previoustrack', () => {
-          if (!self.$store.state.playerAdvertiseData) {
-            if (!self.startOfPlaylist) {
-              self.navigate('prev')
-            }
-          }
-        }],
-        ['nexttrack', () => {
-          if (!self.$store.state.playerAdvertiseData) {
-            if (!self.endOfPlaylist) {
-              self.navigate('next')
-            }
-          }
-        }],
-        ['stop', () => {
-          self.cleanPlayer()
-        }],
-        ['seekto', (details) => {
-          if (!self.$store.state.playerAdvertiseData) {
-            self.playingElement.currentTime = details.seekTime;
-            if ('setPositionState' in navigator.mediaSession) {
-              navigator.mediaSession.setPositionState({
-                duration: self.playingElement.duration,
-                playbackRate: self.playingElement.playbackRate,
-                position: self.playingElement.currentTime
-              });
-            }
-          } else {
-            navigator.mediaSession.setPositionState({
-              duration: 0,
-              playbackRate: self.playingElement.playbackRate,
-              position: 0
-            });
-          }
-        }],
-      ];
-      for (const [action, handler] of actionHandlers) {
-        try {
-          navigator.mediaSession.setActionHandler(action, handler);
-        } catch (error) {
-          console.log(`The media session action "${action}" is not supported yet.`);
-        }
-      }
-      // this.playingElement.addEventListener('play', () => {
-      //   if(playerAdvertiseData && this.$root.$refs.BigPlayer.lyricFS)
-      //   {
-      //     this.$root.$refs.BigPlayer.$refs.lyricFS = false
-      //     this.$root.$refs.BigPlayer.$refs.lyricUI.opened = false
-      //     this.$store.commit('setPlayerLyrics', null)
-      //     this.$utils.closeSheet(this.$root.$refs.playerOptionsBottomSheet)
-      //   }
-      //   /* Play & Pause */
-      //   navigator.mediaSession.playbackState = 'playing';
-      //
-      //
-      //   let lastPlayedList = localStorage.getItem('lastPlayedList') ? JSON.parse(localStorage.getItem('lastPlayedList')) : []
-      //   let updatedLastPlayedList = lastPlayedList.filter((item) => item.id !== this.playingData.id)
-      //   updatedLastPlayedList.unshift(this.playingData)
-      //   localStorage.setItem('lastPlayedList', JSON.stringify(updatedLastPlayedList))
-      // });
-      // this.playingElement.addEventListener('progress', () => {
-      //
-      //   if(this.playingElement.networkState === 2)
-      //   {
-      //     if(!this.isOnline) {
-      //       if(!this.isDistrupted) {
-      //         this.$root.$refs.vToaster.openToast('عدم اتصال به اینترنت!')
-      //         this.isDistrupted = true
-      //       }
-      //     }
-      //     else {
-      //       this.isDistrupted = false
-      //     }
-      //   }
-      // })
-      track.onload = function() {
-        this.playerDisabled = false
-        this.playerDraggable = true
-        this.isPlaying = true
-        track.play();
-      }
-      track.onplay = function() {
-        this.playerDuration = this.$utils.formatTime(track.duration()).toString()
-      }
-      //     this.playingElement.addEventListener('canplay', () => {
-      //         this.playerDisabled = false
-      //         this.playerDraggable = true
-      //         this.isPlaying = true
-      //         this.playingElement.play()
-      // })
-      // this.playingElement.addEventListener('timeupdate', () => {
-      //   if(!this.$store.state.playerData)
-      //   {
-      //     this.removeAllAudios()
-      //   }
-      //   else {
-      //     this.playbackTime = this.playingElement.currentTime
-      //   }
-      // });
-      let stopPauseEvent = false
-      track.onpause = (() => {
-        if(!stopPauseEvent)
-        {this.isPlaying = false
-          navigator.mediaSession.playbackState = 'paused';}
-      });
-      // track.onseek = (() => {
-      //   if(!stopPauseEvent)
-      //   {this.isPlaying = false
-      //     navigator.mediaSession.playbackState = 'paused';}
-      // });
-      // this.playingElement.addEventListener('seeking', async() => {
-      //   stopPauseEvent = true
-      //   await this.playingElement.pause()
-      // });
-      // this.playingElement.addEventListener('seeked', () => {
-      //   stopPauseEvent = false
-      //   this.playingElement.play()
-      // });
-      // this.playingElement.addEventListener('canplaythrough', () => {
-      //   // this.downloadItem(+this.playingElement.id,this.playingElement.src)
-      // });
-      // this.playingElement.addEventListener('loadedmetadata', async (event) => {
-      //   // this.$refs.emptyPlayer.pause()
-      //   if (event.target.id === self.playingElement.id) {
-      //     console.log(event)
-      //     for (const [action, handler] of actionHandlers) {
-      //       try {
-      //         navigator.mediaSession.setActionHandler(action, handler);
-      //       } catch (error) {
-      //         console.log(`The media session action "${action}" is not supported yet.`);
-      //       }
-      //     }
-      //     if (!this.isChanging) {
-      //       this.playerDuration = this.$utils.convertTime(this.playingElement.duration).toString()
-      //       this.rawDuration = this.playingElement.duration
-      //     } else {
-      //       this.rawDuration = 0
-      //       this.playerDuration = this.$utils.convertTime(this.playingElement.duration).toString()
-      //     }
-      //     console.log(this.playerDuration)
-      //   }
-      //   // this.playerDisabled = false
-      //   // this.playerDraggable = true
-      //   console.log(this.playerDuration)
-      // });
-      // this.playingElement.addEventListener('error', (event) => {
-      //   console.log(event)
-      //   // console.log(e.target.error)
-      //   if(this.isOnline) {
-      //     this.isDistrupted = false
-      //     this.playerDecision()
-      //     // self.setAdvertise(this.$store.state.lastAdvData)
-      //   }
-      //   else {
-      //     // if (this.isAudioPlaying) {
-      //     //   this.playingElement.pause()
-      //     //     this.playingElement.setAttribute('preload','none')
-      //     //     this.playingElement.autoplay = false
-      //     //
-      //     //
-      //     // }
-      //     if(!this.isDistrupted) {
-      //       this.$root.$refs.vToaster.openToast('عدم اتصال به اینترنت!')
-      //       this.isDistrupted = true
-      //     }
-      //   }
-      //
-      // })
-      // this.playingElement.addEventListener('loaded', () => {
-      //     this.playingElement.play()
-      // })
-      // this.playingElement.addEventListener('ended', () => {
-      //   this.removeOtherEventListeners(this.playingData.id)
-      //   if (!playerAdvertiseData) {
-      //     if (!this.endOfPlaylist) {
-      //       if (this.repeatOne) {
-      //         this.playingElement.play()
-      //       } else {
-      //         this.navigate('next')
-      //       }
-      //     } else {
-      //       if (this.repeatOne) {
-      //         this.togglePlay()
-      //         this.playbackTime = 0
-      //         this.playingElement.currentTime  = this.playbackTime
-      //         this.togglePlay()
-      //       }
-      //       if (this.repeatAll) {
-      //         this.playItem(playerTracks.tracks,playerTracks.tracks[0],0, this.$store.state.playerQuery, this.$store.state.playerQueryParams,this.$store.state.playerMeta,'player')
-      //       } else {
-      //         this.$root.$refs.lyricUI.close()
-      //         this.playingElement.pause()
-      //       }
-      //     }
-      //   }
-      //   else {
-      //     this.goTop()
-      //     this.$root.$refs.lyricUI.close()
-      //     navigator.mediaSession.setPositionState({
-      //       duration: 0,
-      //       playbackRate: this.playingElement.playbackRate,
-      //       position: 0
-      //     });
-      //     this.playingElement.pause()
-      //     let advCount = playerAdvertiseData.advertises.length
-      //     this.$store.dispatch('setClosePlayer', false)
-      //     if (playerAdvertiseData.advertises[advCount - 1].close_player === true) {
-      //       this.$store.dispatch('setClosePlayer', true)
-      //     }
-      //
-      //     console.log('adertiseIndex : ', this.$store.state.advertiseIndex)
-      //     console.log('advCount : ', advCount)
-      //
-      //
-      //     // if ((0 < this.$store.state.advertiseIndex + 1) // To Check
-      //     //     &&
-      //     //     (this.$store.state.advertiseIndex + 1 !== advCount)) {
-      //     if(this.$store.state.advertiseIndex === advCount - 1)
-      //     {
-      //       this.$store.dispatch('calcAdvertiseIndex')
-      //     }
-      //     if (this.$store.state.advertiseIndex <= advCount - 1) // To Check
-      //     {
-      //       this.$store.dispatch('calcAdvertiseIndex')
-      //       this.playingElement.play()
-      //     } else {
-      //       this.$store.commit('setPlayerAdvertiseData', null)
-      //       this.$store.dispatch('calcAdvertiseIndex', 0)
-      //
-      //       if (this.$store.state.should_close_player === true || this.$root.$refs.app.should_close_player) {
-      //         this.$store.commit('setPlayerTracks', null)
-      //         this.$store.commit('setPlayerData', null)
-      //         this.$store.commit('setPlayerLyrics', null)
-      //         this.$store.dispatch('setClosePlayer', false)
-      //         this.$store.commit('setPlayerAdvertiseData', null)
-      //         this.$root.$refs.app.should_close_player = false
-      //         this.$root.$refs.player.close()
-      //         this.playingElement = null
-      //
-      //       } else
-      //       {
-      //         this.$store.commit('setPlayerAdvertiseData', null)
-      //         this.$store.commit('setPlayerAdvData', null)
-      //         this.isChanging = false
-      //         this.$store.dispatch('setMediaSessionData')
-      //         this.playingElement = null
-      //         this.$store.dispatch('setLastListenedTrack',null)
-      //         this.playItem(
-      //             this.$store.state.playerParams.tracks,
-      //             this.$store.state.playerParams.item,
-      //             this.$store.state.playerParams.index,
-      //             this.$store.state.playerParams.query,
-      //             this.$store.state.playerParams.queryParams,
-      //             this.$store.state.playerParams.meta,
-      //             this.$store.state.playerParams.from
-      //         )
-      //       }
-      //     }
-      //     this.$store.dispatch('setListenCount',{command:'reset'})
-      //   }
-      //
-      //   // }
-      // });
-      // this.playingElement.setAttribute('preload', 'metadata')
-    }
-function   removeOtherEventListeners(id) {
-      for (let i = 0; i < this.$store.state.lastListenedTracksArray.length; i++) {
-        let audio =  document.getElementById(this.$store.state.lastListenedTracksArray[i].track_id)
-        if(audio && (audio.id !== id)) {
-          audio.outerHTML = audio.outerHTML // eslint-disable-line
-        }
-      }
-    }
-function    removeAllEventListeners() {
-      let audios = Array.from(document.getElementsByTagName('audio'))
-      let audioList = audios.map((audio,index) => {return audios[index].id})
-      for (let audio in audioList) {
-        let toRemove = document.getElementById(audioList[audio])
-        toRemove.outerHTML = toRemove.outerHTML // eslint-disable-line
-      }
-    }
-function   resetPlayerTimer() {
-      if(this.playingElement && !playerAdvertiseData) {
-        this.isPlaying = false
-        // this.playingElement.pause()
-        this.playbackTime = 0
-        this.playingElement.currentTime = 0
+    const resetPlayerTimer = () => {
+      if(playingElement.value && !playerAdvertiseData) {
+        isPlaying.value = false
+        // playingElement.value.pause()
+        playbackTime.value = 0
+        playingElement.value.currentTime = 0
         this.playerCurrentTime = '00:00'
         this.playerDuration = '00:00'
       }
     }
-function  timeUpdate() {
-      if (this.playingElement) {
-        if (!this.isChanging) {
-          this.playbackTime = this.playingElement.currentTime
-          let s = parseInt(this.playingElement.currentTime % 60);
-          let m = parseInt((this.playingElement.currentTime / 60) % 60);
-          this.playerCurrentTime = (this.$utils.prependZero(m) + ':' + this.$utils.prependZero(s))
+    const timeUpdate = () => {
+      if (playingElement.value) {
+        if (!isChanging.value) {
+          playbackTime.value = playingElement.value.currentTime
+          let s = parseInt(playingElement.value.currentTime % 60);
+          let m = parseInt((playingElement.value.currentTime / 60) % 60);
+          this.playerCurrentTime = ($utils.prependZero(m) + ':' + $utils.prependZero(s))
         } else {
-          let s = parseInt(this.playingElement.currentTime % 60);
-          let m = parseInt((this.playingElement.currentTime / 60) % 60);
-          this.playerCurrentTime = (this.this.$utils.prependZero(m) + ':' + this.this.$utils.prependZero(s))
+          let s = parseInt(playingElement.value.currentTime % 60);
+          let m = parseInt((playingElement.value.currentTime / 60) % 60);
+          this.playerCurrentTime = ($utils.prependZero(m) + ':' + $utils.prependZero(s))
         }
       }
     }
 
-function  goTop() {
+    const goTop = () => {
       document.getElementById('Player').scrollTo({
         top: 0
       })
     }
-function   changeTime() {
-      this.playingElement.seek(this.$refs.slider.value)
+    const changeTime = () => {
+      playingElement.value.seek(this.$refs.slider.value)
     }
-function   setIsDragging() {
-      this.isDragging = true
+    function   setIsDragging() {
+      isDragging.value = true
     }
-function   clearDragging() {
-      this.isDragging = false
+    function   clearDragging() {
+      isDragging.value = false
     }
 
-function   next() {
-      if (!this.endOfPlaylist) {
-        this.navigate('next')
+    function   next() {
+      if (!endOfPlaylist.value) {
+        navigate('next')
       }
     }
-function    prev() {
-      if (!this.startOfPlaylist) {
-        this.navigate('prev')
+    function    prev() {
+      if (!startOfPlaylist.value) {
+        navigate('prev')
       }
     }
-function   toggleShuffle() {
-      return this.shuffleEnabled ? this.shuffleEnabled = false : this.shuffleEnabled = true
-    }
-function  toggleRepeat() {
-      if (this.repeatOne) {
-        this.repeatOne = false
-        this.repeatAll = true
-      } else if (this.repeatAll) {
-        this.repeatOne = false
-        this.repeatAll = false
-      } else {
-        this.repeatOne = true
-        this.repeatAll = false
-      }
-    }
-function   navigate(action) {
-      this.isChanging = true
-      // if(this.playingElement.)
-      // if(this.playingElement && (this.playingElement.networkState === 1 || this.playingElement.networkState === 2)) {
-      //   this.playingElement.setAttribute('preload', 'none')
-      //   this.playingElement.src = this.playingElement.src // eslint-disable-line
+    function   navigate(action) {
+      isChanging.value = true
+      // if(playingElement.value.)
+      // if(playingElement.value && (playingElement.value.networkState === 1 || playingElement.value.networkState === 2)) {
+      //   playingElement.value.setAttribute('preload', 'none')
+      //   playingElement.value.src = playingElement.value.src // eslint-disable-line
       // }
-      // this.removeOtherEventListeners(this.playingElement.id)
+      // this.removeOtherEventListeners(playingElement.value.id)
       // this.resetPlayerTimer()
       // this.nextAudio = null
-      this.$store.commit('setPlayerLyrics',null)
+      setPlayerLyrics(null)
       // let playerDataTitle = document.getElementById('playerDataTitle')
       // let info = document.getElementById('info')
       // playerDataTitle.style.opacity = 0
@@ -625,8 +170,8 @@ function   navigate(action) {
       if (action === 'next') {
 
         if (playerIndex > playerTracks.tracks.length - 5 &&
-            (this.$store.state.playerMeta && this.$store.state.playerMeta.end !== true)) {
-          this.$store.dispatch('get_Data',
+            (playerMeta && playerMeta.end !== true)) {
+          get_Data(
               {
 
                 api_command: this.$refs.playerData.query,
@@ -637,7 +182,7 @@ function   navigate(action) {
                 }
               })
         }
-        if (this.shuffleEnabled) {
+        if (shuffleEnabled.value) {
           playerIndex = Math.floor(Math.random() * playerTracks.tracks.length)
           this.playingData = playerTracks.tracks[playerIndex]
         } else {
@@ -650,13 +195,13 @@ function   navigate(action) {
         playerIndex--
       }
 
-      this.$store.commit('setPlayerData', {
-        'item': this.playingData,
-        'index': playerIndex,
-        'query': this.$store.state.playerQuery,
-        'queryParams': this.$store.state.playerQueryParams,
-        'meta': this.$store.state.playerMeta,
-        'from':this.$store.state.playerFrom})
+      setPlayerData(
+          {'item': this.playingData,
+            'index': playerIndex,
+            'query': this.$store.state.playerQuery,
+            'queryParams': this.$store.state.playerQueryParams,
+            'meta': this.$store.state.playerMeta,
+            'from':this.$store.state.playerFrom})
       if(!this.$store.state.playerData.lyric.has_lyric)
       {
         if(this.$root.$refs.BigPlayer.lyricFS) {
@@ -664,7 +209,7 @@ function   navigate(action) {
           this.$root.$refs.BigPlayer.$refs.lyricUI.opened = false
         }
       }
-      this.$store.commit('collectPlayerParams',{
+      collectPlayerParams({
         'tracks':playerTracks.tracks,
         'item':this.playingData,
         'index':playerIndex,
@@ -673,7 +218,7 @@ function   navigate(action) {
         'meta':this.$store.state.playerMeta,
         'from':this.$store.state.playerFrom})
       if(navTimer) {
-        // this.playingElement.pause()
+        // playingElement.value.pause()
         // this.resetPlayerTimer()
         clearTimeout(navTimer)
       }
@@ -694,11 +239,11 @@ function   navigate(action) {
         // // }
       },600)
 
-      this.isChanging = false
+      isChanging.value = false
     }
-function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
+    function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
       let defTracks = playerTracks
-      this.$store.commit('collectPlayerParams',{tracks,item, index, query, queryParams, meta, from})
+      collectPlayerParams({tracks,item, index, query, queryParams, meta, from})
       if (playerTracks && playerTracks.tracks) {
         let playerTracks = playerTracks
         let playerIndex = playerIndex + 1
@@ -713,14 +258,14 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
                 "action": "loadmore"
               }
             }).then(() => {
-              this.endOfPlaylist = index === tracks.length - 1
-              this.startOfPlaylist = index === 0
+              endOfPlaylist.value = index === tracks.length - 1
+              startOfPlaylist.value = index === 0
             })
           }
         }
       }
-      this.endOfPlaylist = index === tracks.length - 1
-      this.startOfPlaylist = index === 0
+      endOfPlaylist.value = index === tracks.length - 1
+      startOfPlaylist.value = index === 0
       let playerCurrent_id = this.$store.state.playerQueryParams ? this.$store.state.playerQueryParams[from + '_id'] : null
       if (from !== 'player')
       {this.goTop()}
@@ -728,7 +273,7 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
       // check if track selected from player track list
       if (from === 'player') {
         if (playerTracks.tracks) {
-          this.$store.commit('setPlayerData', {
+          setPlayerData({
             item,
             index,
             query,
@@ -737,7 +282,7 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
             from
           })
         } else {
-          this.$store.commit('setPlayerData', {
+          setPlayerData({
             item,
             index,
             meta,
@@ -750,7 +295,7 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
         //       'result': {tracks: tracks, end: true, remaining: 0},
         //       'action': 'default'
         //     })
-        this.$store.commit('setPlayerData', {
+        setPlayerData({
           item,
           index,
           meta,
@@ -762,22 +307,21 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
           if (queryParams[from + '_id'] === playerCurrent_id && queryParams.sort_by ===
               this.$store.state.playerQueryParams.sort_by && queryParams.offset ===
               this.$store.state.playerQueryParams.offset) {
-            this.$store.commit('setPlayerData',
-                {
-                  item,
-                  index,
-                  query,
-                  queryParams,
-                  meta,
-                  from
-                })
+            setPlayerData({
+              item,
+              index,
+              query,
+              queryParams,
+              meta,
+              from
+            })
           } else {
             // this.$store.commit('setPlayerTracks',
             //     {
             //       'result': meta,
             //       'action': 'default'
             //     })
-            this.$store.commit('setPlayerData', {
+            setPlayerData({
               item,
               index,
               query,
@@ -792,7 +336,7 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
           //       'result': meta,
           //       'action': 'default'
           //     })
-          this.$store.commit('setPlayerData', {
+          setPlayerData({
             item,
             index,
             query,
@@ -801,7 +345,7 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
             from
           })
         }
-        this.$store.commit('setTrackDownloadFlags')
+        setTrackDownloadFlags()
         // this.$root.$refs.player.open()
       }
       this.$store.commit('setPlayerTracks',
@@ -809,7 +353,7 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
             'result': defTracks,
             'action': 'default'
           })
-      this.playingData = this.$store.state.playerData
+      playingData.value = playerData
       if (this.$root.$refs.currentMusicList) {
         let hashedParams = sha1(JSON.stringify(this.$root.$refs.currentMusicList.queryParams))
         let hashedQueryParams = sha1(JSON.stringify(queryParams))
@@ -818,37 +362,37 @@ function   selectTrack(tracks, item, index, query, queryParams, meta, from) {
         }
       }
     }
-function    playItem(tracks, item, index, query, queryParams, meta, from) {
-      if(!this.stopPlaying) {
-        this.$store.commit('setPlayerLyrics',null)
+    function    playItem(tracks, item, index, query, queryParams, meta, from) {
+      if(!stopPlaying.value) {
+        setPlayerLyrics(null)
         //init selected Track
-        this.selectTrack(tracks, item, index, query, queryParams, meta, from)
+        selectTrack(tracks, item, index, query, queryParams, meta, from)
 
-        if(!playerAdvertiseData)
+        if(!playerAdvertiseData.value)
         {
-          this.initPlayingObject(index,item)
+          initPlayingObject(index,item)
         }
       }
     }
-function    initPlayingObject(PlayerIndex,playingData)    {
+    function    initPlayingObject(PlayerIndex,playingData)    {
       this.rawDuration = 0
-      this.playbackTime = 0
+      playbackTime.value = 0
       this.bufferedAudio = 0
-      this.endOfPlaylist = PlayerIndex === playerTracks.tracks.length - 1
-      this.startOfPlaylist = PlayerIndex === 0
-      if(this.playingElement) {
-        this.playingElement.stop()
-        this.playingElement.unload()
-        URL.revokeObjectURL(this.playingElement.src)
+      endOfPlaylist.value = PlayerIndex === playerTracks.tracks.length - 1
+      startOfPlaylist.value = PlayerIndex === 0
+      if(playingElement.value) {
+        playingElement.value.stop()
+        playingElement.value.unload()
+        URL.revokeObjectURL(playingElement.value.src)
         // this.removeAllAudios()
       }
-      // this.playingElement = null
+      // playingElement.value = null
 
-      // this.playingElement = document.createElement('audio')
-      // this.playingElement.setAttribute('id', playingData.id)
-      // this.playingElement.setAttribute('preload', 'none')
-      // this.playingElement.setAttribute('crossorigin', 'anonymous')
-      // document.body.appendChild(this.playingElement)
+      // playingElement.value = document.createElement('audio')
+      // playingElement.value.setAttribute('id', playingData.id)
+      // playingElement.value.setAttribute('preload', 'none')
+      // playingElement.value.setAttribute('crossorigin', 'anonymous')
+      // document.body.appendChild(playingElement.value)
 
       // this.initListenCount()
       let theMp3
@@ -858,18 +402,18 @@ function    initPlayingObject(PlayerIndex,playingData)    {
         theMp3 = playingData.mp3s.filter(el => el.quality === '160')
       }
       console.log(theMp3)
-      this.$store.commit('setFetchUrl', this.$store.state.cdnUrl + theMp3[0].name +
+      setFetchUrl(cdnUrl + theMp3[0].name +
           '?type=pwa&melodify_token=' + userObject.user.id + '&download_token=' + userObject.token)
 
 
-      if (document.getElementById('Player').scrollTop > 10 && (!this.$store.state.playerLyrics && !this.$store.state.isLoadingLyrics)) {
-        if (this.$store.state.playerData.lyric.has_lyric) {
-          this.toggleLyrics()
+      if (document.getElementById('Player').scrollTop > 10 && (!playerLyrics && !isLoadingLyrics)) {
+        if (playerData.lyric.has_lyric) {
+          toggleLyrics()
         }
       }
-      this.updateMetadata(playingData)
+      updateMetadata(playingData)
     }
-function   initListenCount() {
+    function   initListenCount() {
       let ads_limitations = this.advertise_data.limitations
       let fileWeight
       if(this.playingData.is_demo) {
@@ -884,9 +428,9 @@ function   initListenCount() {
       }
       this.$store.dispatch('setListenCount',{size:fileWeight})
     }
-function    setPlayingElement(src) {
+    function    setPlayingElement(src) {
       let __this = this
-      this.playingElement = new Howl({
+      playingElement.value = new Howl({
         src: [src],
         autoplay:true,
         preload:'metadata',
@@ -894,11 +438,11 @@ function    setPlayingElement(src) {
         onplay: function () {
           __this.playerDisabled = false
           __this.playerDraggable = true
-          __this.isPlaying = true
+          __isPlaying.value = true
           // Display the duration.
           let d = this.duration()
           __this.rawDuration = d
-          __this.playerDuration = __this.$utils.formatTime(d).toString()
+          __this.playerDuration = __$utils.formatTime(d).toString()
           // Start updating the progress of the track.
           animationFrame =  requestAnimationFrame(__this.step.bind(this));
         },
@@ -909,24 +453,24 @@ function    setPlayingElement(src) {
           //   self.skip('next');
           __this.playerDuration = '00:00'
           if (!__playerAdvertiseData) {
-            if (!__this.endOfPlaylist) {
-              if (__this.repeatOne) {
-                __this.playingElement.play()
+            if (!__endOfPlaylist.value) {
+              if (__repeatOne.value) {
+                __playingElement.value.play()
               } else {
                 __this.navigate('next')
               }
             } else {
-              if (__this.repeatOne) {
+              if (__repeatOne.value) {
                 __this.togglePlay()
-                __this.playbackTime = 0
-                __this.playingElement.currentTime  = this.playbackTime
+                __playbackTime.value = 0
+                __playingElement.value.currentTime  = playbackTime.value
                 __this.togglePlay()
               }
-              if (__this.repeatAll) {
-                __this.playItem(__playerTracks.tracks,__playerTracks.tracks[0],0, __this.$store.state.playerQuery, __this.$store.state.playerQueryParams,__this.$store.state.playerMeta,'player')
+              if (__repeatAll.value) {
+                playItem(__playerTracks.tracks,__playerTracks.tracks[0],0, __this.$store.state.playerQuery, __this.$store.state.playerQueryParams,__this.$store.state.playerMeta,'player')
               } else {
                 __this.$root.$refs.lyricUI.close()
-                __this.playingElement.pause()
+                __playingElement.value.pause()
               }
             }
           }
@@ -935,10 +479,10 @@ function    setPlayingElement(src) {
             __this.$root.$refs.lyricUI.close()
             navigator.mediaSession.setPositionState({
               duration: 0,
-              playbackRate: __this.playingElement.playbackRate,
+              playbackRate: __playingElement.value.playbackRate,
               position: 0
             });
-            __this.playingElement.pause()
+            __playingElement.value.pause()
             let advCount = __playerAdvertiseData.advertises.length
             __this.$store.dispatch('setClosePlayer', false)
             if (__playerAdvertiseData.advertises[advCount - 1].close_player === true) {
@@ -959,28 +503,28 @@ function    setPlayingElement(src) {
             if (__this.$store.state.advertiseIndex <= advCount - 1) // To Check
             {
               __this.$store.dispatch('calcAdvertiseIndex')
-              __this.playingElement.play()
+              __playingElement.value.play()
             } else {
               this.$store.commit('setPlayerAdvertiseData', null)
               __this.$store.dispatch('calcAdvertiseIndex', 0)
 
               if (__this.$store.state.should_close_player === true || __this.$root.$refs.app.should_close_player) {
                 __this.$store.commit('setPlayerTracks', null)
-                __this.$store.commit('setPlayerData', null)
+                setPlayerData( null)
                 __this.$store.commit('setPlayerLyrics', null)
                 __this.$store.dispatch('setClosePlayer', false)
                 __this.$store.commit('setPlayerAdvertiseData', null)
                 __this.$root.$refs.app.should_close_player = false
                 __this.$root.$refs.player.close()
-                // __this.playingElement = null
+                // __playingElement.value = null
 
               } else
               {
                 __this.$store.commit('setPlayerAdvertiseData', null)
                 __this.$store.commit('setPlayerAdvData', null)
-                __this.isChanging = false
-                // __this.$store.dispatch('setMediaSessionData')
-                // __this.playingElement = null
+                __isChanging.value = false
+                // __setMediaSessionData()
+                // __playingElement.value = null
                 __this.$store.dispatch('setLastListenedTrack',null)
                 __this.playItem(
                     __this.$store.state.playerParams.tracks,
@@ -1015,9 +559,9 @@ function    setPlayingElement(src) {
           }
           else {
             // if (this.isAudioPlaying) {
-            //   this.playingElement.pause()
-            //     this.playingElement.setAttribute('preload','none')
-            //     this.playingElement.autoplay = false
+            //   playingElement.value.pause()
+            //     playingElement.value.setAttribute('preload','none')
+            //     playingElement.value.autoplay = false
             //
             //
             // }
@@ -1041,18 +585,18 @@ function    setPlayingElement(src) {
         },
         onseek: function () {
           cancelAnimationFrame(animationFrame)
-          // let seek = __this.playingElement.seek()
-          // __this.playerCurrentTime = __this.$utils.convertTime(Number(seek.toPrecision(2)))
+          // let seek = __playingElement.value.seek()
+          // __this.playerCurrentTime = __$utils.convertTime(Number(seek.toPrecision(2)))
           // Start updating the progress of the track.
           animationFrame = requestAnimationFrame(__this.step.bind(__this));
         },
         onload: function () {
-          // __this.handleLoad(__this.playingElement)
+          // __this.handleLoad(__playingElement.value)
           animationFrame =  requestAnimationFrame(__this.step.bind(this));
         }
       })
     }
-function    handleLoad(audio) {
+    function    handleLoad(audio) {
       const node = audio._sounds[0]._node;
       // const node:HTMLAudioElement = (audio as any)._sounds[0]._node; // For Typescript
 
@@ -1081,7 +625,7 @@ function    handleLoad(audio) {
       // })
     }
 
-function   step() {
+    function   step() {
       cancelAnimationFrame(animationFrame)
       seek = null
       seek = self.playingElement.seek() || 0
@@ -1095,11 +639,11 @@ function   step() {
         animationFrame = requestAnimationFrame(this.step.bind(this));
       }
     }
-async function updateMetadata() {
+    async function updateMetadata() {
       // Decide what to do before loadingTrack
       this.retryCount = 0
       if (!playerAdvertiseData) {
-        // if(this.$utils.isInDownloadedTracks(playingData.id)) {
+        // if($utils.isInDownloadedTracks(playingData.id)) {
         //   let idTrack = await db.dlTracks
         //       .where('id')
         //       .equals(playingData.id)
@@ -1112,7 +656,7 @@ async function updateMetadata() {
         this.setPlayingElement(this.$store.state.fetchUrl)
         // }
 
-        if(!this.playingElement._src[0].includes('blob')) {
+        if(!playingElement.value._src[0].includes('blob')) {
           console.log('player is deciding')
           await this.playerDecision()
         }
@@ -1122,10 +666,10 @@ async function updateMetadata() {
 
 
         // this.setMediaSessionHandlers()
-        this.playingElement.play()
-        // this.setEventListeners(this.playingElement)
+        playingElement.value.play()
+        // this.setEventListeners(playingElement.value)
         this.updatePositionState()
-        this.playingElement.muted = false
+        playingElement.value.muted = false
         // if(!this.$store.state.user.is_premium) {console.error(this.$store.state.listenCount)}
       }
 
@@ -1134,9 +678,9 @@ async function updateMetadata() {
         if(this.$root.$refs.lyricUI) this.$root.$refs.lyricUI.opened = false
         this.$root.$refs.BigPlayer.pointerDisabled = false
       }
-      console.log(this.playingElement)
+      console.log(playingElement.value)
     }
-function    setMediaSessionHandlers() {
+    function    setMediaSessionHandlers() {
       const actionHandlers = [
         ['play', async() => {
           await self.playingElement.play()
@@ -1188,7 +732,7 @@ function    setMediaSessionHandlers() {
         }
       }
     }
-async  function  playerDecision() {
+    async  function  playerDecision() {
       clearTimeout(retryTimer)
       await fetch(this.$store.state.fetchUrl,{
         headers: {
@@ -1218,7 +762,7 @@ async  function  playerDecision() {
           })
           .catch((error) => {
             console.log('other Network Error', error)
-            this.playingElement.pause()
+            playingElement.value.pause()
             // this.$root.$refs.vToaster.openToast('مشکل در ارتباط با سرور')
             retryTimer = setTimeout((self=this)=> {
               self.playingElement.load()
@@ -1234,82 +778,16 @@ async  function  playerDecision() {
       // }
       // })
     }
-function    updatePositionState() {
+    function    updatePositionState() {
       if ('setPositionState' in navigator.mediaSession) {
         navigator.mediaSession.setPositionState({
-          duration: isNaN(this.playingElement.duration) ? 0 : this.playingElement.duration,
-          playbackRate: this.playingElement.playbackRate,
-          position: this.playingElement.currentTime
+          duration: isNaN(playingElement.value.duration) ? 0 : playingElement.value.duration,
+          playbackRate: playingElement.value.playbackRate,
+          position: playingElement.value.currentTime
         });
       }
     }
-
-function   isInViewport(el) {
-      const rect = el.getBoundingClientRect();
-      return (
-          rect.top >= 0 &&
-          rect.left >= 0 &&
-          rect.bottom <= (window.innerHeight + 50
-              ||
-              document.documentElement.clientHeight + 50) &&
-          rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-
-      );
-    }
-function   removeAllAudios() {
-      // let audios = Array.from(document.getElementsByTagName('audio'))
-      // let audioList = audios.map((audio,index) => {return audios[index].id})
-      // for (let audio in audioList) {
-      //   let toRemove = document.getElementById(audioList[audio])
-      //   toRemove.src = ''
-      //   document.body.removeChild(toRemove)
-      // }
-      // this.playingElement = null
-      this.$store.dispatch('setLastListenedTrack',null)
-    }
-function   checkForNext() {
-      if (this.nextAudio) {
-        if (!this.isChanging) {
-          this.playerDuration = this.$utils.formatTime(this.$refs.thePlayer.duration).toString()
-          this.rawDuration = this.$refs.thePlayer.duration
-        } else {
-          this.rawDuration = 0
-          this.playerDuration = this.$utils.formatTime(this.$refs.thePlayer.duration).toString()
-        }
-        this.nextAudio = null
-      }
-    }
-function   advButton() {
-      this.$root.$refs.app.isFromLimitCover = true
-      this.$root.$refs.player.close()
-      this.$store.dispatch('handleAction', {target_type: playerAdvertiseData.advertises[this.$store.state.advertiseIndex].btn_action.target_type})
-    }
-function   isAudioPlaying() {
-      return (this.playingElement.currentTime > 0 && !this.playingElement.paused && !this.playingElement.ended && this.playingElement.readyState > 2)
-    }
-function    toggleScrollBtn() {
-      let middle = document.getElementById('Middle')
-      let Player = document.getElementById("Player")
-      let goToTopPlayer = document.getElementById("goToTopPlayer")
-
-      let heightDif = middle.offsetHeight - (middle.offsetHeight - Player.scrollTop).toPrecision(2)
-
-
-      if (heightDif > 600 && goToTopPlayer.classList.contains('hide')) {
-        goToTopPlayer.classList.remove('hide')
-
-      } else if (heightDif < 600 && !goToTopPlayer.classList.contains('hide')) {
-        goToTopPlayer.classList.add('hide')
-
-      }
-    }
-function   swipeFalse() {
-      this.$root.$refs.player.swipeAble = false
-    }
-function    swipeTrue() {
-      this.$root.$refs.player.swipeAble = true
-    }
-function   toggleLyrics() {
+    function   toggleLyrics() {
       this.$store.commit('setPlayerLyrics', null)
       Promise.all([this.getLyrics()])
           .then(() => {
@@ -1332,235 +810,30 @@ function   toggleLyrics() {
         }
       })
     }
-function   copyToClipboard() {
-      navigator.clipboard.writeText(this.$store.state.playerLyrics.lyrics.text);
-      this.$root.$refs.vToaster.openToast(
-          'کپی شد'
-      )
-    }
-function   shareLyrics() {
-      window.navigator.share({
-        title: 'اشتراک',
-        text:
-        this.$store.state.playerLyrics.lyrics.text,
-      })
-          .then(() =>
-              console.log('Yay, you shared it :)'))
-          .catch(error => console.log('Oh noh! You couldn\'t share it! :\'(\n', error));
-    }
-    async function getAdvertise() {
-      await this.$store.dispatch('calcAdvertiseIndex', 0)
-      await this.$store.dispatch(
-          'get_Data',
-          {
-            api_command: 'getAdvertise',
-            params: {
-              type: this.advertise_data.advertise_type
-            },
-            store_command: {"command": 'setPlayerAdvData'}
-          }
-      ).then(async () => {
-        console.log(this.$store.state.playerAdvData.advertises[this.$store.state.advertiseIndex])
-        console.log(this.$store.state.advertiseIndex)
-        const client = axios.create({
-          baseURL: this.$store.state.cdnUrl,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            "device_id": localStorage.getItem('device_id'),
-            "device_name": localStorage.getItem('device_name'),
-            'user-id': userObject.user.id,
-            'authorization': userObject.token,
-            'device_token': localStorage.getItem('device_token'),
-            'platform': this.$device.os_name.name,
-            'pwa-version': this.$store.state.pwa_version
-          }
-        })
-        await client.get(
-            this.$store.state.cdnUrl +
-            this.$store.state.playerAdvData.advertises[this.$store.state.advertiseIndex].ads_track +
-            '?timestamp=' + Date.now(),
-            {
-              responseType: "arraybuffer"
-            }
-        )
-            .then(res => {
-              const blob = new Blob([res.data], {
-                type: 'audio/mp3',
-              });
-              console.log(window.URL.createObjectURL(blob))
-              this.advData = {
-                getAdvertiseData: this.$store.state.playerAdvData,
-                advAudio: window.URL.createObjectURL(blob)
-              }
-              this.$store.dispatch('setLastAdvData',this.advData)
-            })
-            .catch((error) => {
-              // console.log(error.status.code)
-              console.log(error)
-            })
-      })
-    }
-    async function handleAdvertise(errorCode) {
-      if(errorCode === 4) {
-        try {
-          if (this.$online) {
-            if (this.$store.state.fetchUrl) {
-              await  fetch(this.$store.state.fetchUrl, {
-                headers: {
-                  'Access-Control-Allow-Origin': '*',
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json'
-                }
-              })
-                  .then(async (response) => {
-                    // await this.$store.dispatch('calcAdvertiseIndex', 0)
-                    // let userObject = JSON.parse(localStorage.getItem('userObject'))
-                    if ((480 < response.status) && (response.status < 499)) {
-                      if(!this.advData)
-                      {
-                        await this.getAdvertise()
-                      }
-                      // await this.$store.dispatch(
-                      //     'get_Data',
-                      //     {
-                      //         api_command: 'getAdvertise',
-                      //         params: {
-                      //             type: response.status
-                      //         },
-                      //         store_command: {"command": 'setPlayerAdvData'}
-                      //     }
-                      // ).then(async () => {
-                      //     console.log(this.$store.state.advData.advertises[this.$store.state.advertiseIndex])
-                      //     console.log(this.$store.state.advertiseIndex)
-                      //     const client = axios.create({
-                      //         baseURL: this.$store.state.cdnUrl,
-                      //         headers: {
-                      //             'Accept': 'application/json',
-                      //             'Content-Type': 'application/json',
-                      //             'Access-Control-Allow-Origin': '*',
-                      //             "device_id": localStorage.getItem('device_id'),
-                      //             "device_name": localStorage.getItem('device_name'),
-                      //             'user-id': userObject.user.id,
-                      //             'authorization': userObject.token,
-                      //             'device_token': localStorage.getItem('device_token'),
-                      //             'platform': this.$device.os_name.name
-                      //         }
-                      //     })
-                      //     await client.get(
-                      //         this.$store.state.cdnUrl + this.$store.state.advData.advertises[this.$store.state.advertiseIndex].ads_track + '?timestamp=' + Date.now(),
-                      //         {
-                      //             responseType: "arraybuffer"
-                      //         }
-                      //     )
-                      //         .then(res => {
-                      //             const blob = new Blob([res.data], {
-                      //                 type: 'audio/mp3',
-                      //             });
-                      //             console.log(window.URL.createObjectURL(blob))
-                      //             this.advData = {
-                      //                 getAdvertiseData: this.$store.state.advData,
-                      //                 advAudio: window.URL.createObjectURL(blob)
-                      //             }
-                      //         })
-                      //         .catch((error) => {
-                      //             // console.log(error.status.code)
-                      //             console.log(error)
-                      //         })
-                      // })
-                      // nextAudioElement.value.removeAllListeners()
-                    }
-                  })
-                  .catch((error) => {
-                    // console.log(error.status.code)
-                    console.log(error)
-                  })
-            }
-          } else {
-            // this.getDuration()
-            if (this.isAudioPlaying) {
-              this.playingElement.pause()
-            }
-            this.$root.$refs.vToaster.openToast('عدم اتصال به اینترنت!')
-            // window.alert('you are offline')
-          }
-        }
-        catch
-        {
-          console.log('error')
-        }
-      }
-    }
-    async function setAdvertise(adv) {
-      this.$store.commit('setPlayerAdvertiseData', adv.getAdvertiseData)
-      navigator.mediaSession.metadata = new MediaMetadata({ // eslint-disable-line
-        title: adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].title,
-        artist: adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].bottom_player_text,
-        album: adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].description,
-        artwork: [
-          {
-            src: this.$store.state.imgUrl +
-                adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].image,
-            sizes: '96x96',
-            type: 'image/png'
-          },
-          {
-            src: this.$store.state.imgUrl + adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].image,
-            sizes: '128x128',
-            type: 'image/png'
-          },
-          {
-            src: this.$store.state.imgUrl + adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].image,
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: this.$store.state.imgUrl + adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].image,
-            sizes: '256x256',
-            type: 'image/png'
-          },
-          {
-            src: this.$store.state.imgUrl + adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].image,
-            sizes: '384x384',
-            type: 'image/png'
-          },
-          {
-            src: this.$store.state.imgUrl + adv.getAdvertiseData.advertises[this.$store.state.advertiseIndex].image,
-            sizes: '512x512',
-            type: 'image/png'
-          },
-        ]
-      });
-      this.$root.$refs.BigPlayer.advTrack = adv.advAudio
-      // this.playingElement = null
-      this.advData = null
-    }
-
-
-function   closeSheet() {
-      this.isMinimized = true
-      this.$root.$refs.player.close()
-    }
-function  scrollUp() {
-      document.getElementById('Player').scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      })
-    }
-function   cleanPlayer() {
+    function   cleanPlayer() {
       if (playingElement && playingElement.value) {
         playingElement.value.pause()
       }
       // this.$store.commit('setPlayerTracks', null)
-      // this.$store.commit('setPlayerData', null)
+      // setPlayerData( null)
       // this.$root.$refs.player.close()
     }
+
+    onMounted((key, value) => {
+      let userObject = storeToRefs(devUserObject["09353264254"])
+    })
+
+
+    return {
+      togglePlay,next,prev,playItem
+    }
+  }
+}
 
 </script>
 
 
-<template>
+<template ref="thePlayer">
   <div class="playerBox">
     <div class="upItems">
 					<span class="d-flex">
@@ -1663,14 +936,14 @@ function   cleanPlayer() {
 
 
 
-      <svg @pointerup="togglePlay()"
+      <svg @pointerup="togglePlay"
            class="play"
            v-show="!isPlaying"
            width="70" height="70" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M70 35C70 54.33 54.33 70 35 70C15.67 70 0 54.33 0 35C0 15.67 15.67 0 35 0C54.33 0 70 15.67 70 35Z" fill="#F2C94C"/>
         <path d="M48 33.268C49.3333 34.0378 49.3333 35.9623 48 36.7321L30 47.1244C28.6667 47.8942 27 46.9319 27 45.3923V24.6077C27 23.0681 28.6667 22.1058 30 22.8756L48 33.268Z" fill="#212121"/>
       </svg>
-      <svg @pointerup="togglePlay()"
+      <svg @pointerup="togglePlay"
            class="pause"
            v-show="isPlaying"
            width="70" height="70" viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">

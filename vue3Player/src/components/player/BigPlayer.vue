@@ -2,15 +2,12 @@
 <script setup>
 import Recycler from "@/components/Recycler.vue";
 import ThePlayer from "@/components/player/components/thePlayer.vue";
-import {app} from "@/main";
-app.provide('thePlayer',ThePlayer)
-import{ ref} from "vue";
+import {ref, provide, onMounted} from "vue";
       defineProps({
         data: {
           type: Object
         }
       })
-
       const advTrack = ref(null)
       const retryCount = ref(0)
       const advData = ref(null)
@@ -61,6 +58,7 @@ const {
   playerData,playerCheckedItems,playerTracks,playerIndex,playerQuery,playerQueryParams
 
 } = storeToRefs(melodifyStore)
+provide('thePlayer',ThePlayer)
 </script>
 
 <template>

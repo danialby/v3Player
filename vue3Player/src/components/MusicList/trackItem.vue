@@ -1,8 +1,4 @@
 <script setup>
-// import '@/utils/long-press-event'
-// import BtnGroup from "@/components/includes/Elements/MusicList/btnGroup.vue";
-// import ContextMenu from "@/components/includes/Elements/MusicList/contextMenu.vue";
-// import MoreOptions from "@/components/includes/Elements/MusicList/moreOptions.vue";
 import {ref,inject} from 'vue'
 defineProps({
   index: Number,
@@ -12,10 +8,19 @@ defineProps({
 })
 
 
-const thePlayer = inject('thePlayer')
+import {storeToRefs} from "pinia";
+import {melodify, playerStore} from "@/store";
+import ThePlayer from "@/components/player/components/thePlayer.vue";
+const player = playerStore()
+const {
+  imgUrl,playerCheckedItems,musicListCheckedItems
+} = storeToRefs(melodifyStore)
+
+const { playItem } = player()
+
 const optionsOpened = ref(false)
 function playTrack(data, theData, index, query, queryParams, meta, from) {
-  thePlayer.playItem(data, theData, index, query, queryParams, meta, from)
+  playItem(data, theData, index, query, queryParams, meta, from)
 }
 function toggleMoreOptions() {
   optionsOpened.value = !optionsOpened.value
@@ -29,16 +34,10 @@ function   isCheckedItem(theItem) {
   }
 }
 function    closeAndEmit(emit) {
-  this.optionsOpened = false
-  this.$emit(emit)
+  optionsOpened.value = false
+  emit(emit)
 }
 
-import {storeToRefs} from "pinia";
-import {melodify} from "@/store";
-const melodifyStore = melodify()
-const {
-  imgUrl
-} = storeToRefs(melodifyStore)
 </script>
 
 

@@ -189,7 +189,7 @@ export default {
       }
     },
     openAdvNPlay() {
-      this.$utils.openSheet(this.$root.$refs.player)
+      $utils.openSheet(this.$root.$refs.player)
       // this.$root.$refs.player.open()
 	  // this.$root.$refs.thePlayer.src = this.$root.$refs.BigPlayer.advAudio
 		  this.$root.$refs.thePlayer.playingElement.play()
@@ -204,10 +204,10 @@ export default {
       }
     },
     playbackTime() {
-      let diff = Math.abs(this.playbackTime - this.$root.$refs.thePlayer.playingElement.currentTime);
+      let diff = Math.abs(playbackTime.value - this.$root.$refs.thePlayer.playingElement.currentTime);
       //Throttle synchronization to prevent infinite loop between playback listener and this watcher
       if (diff > 0.01)
-        this.$root.$refs.thePlayer.playingElement.currentTime = this.playbackTime;
+        this.$root.$refs.thePlayer.playingElement.currentTime = playbackTime.value;
     },
 
 

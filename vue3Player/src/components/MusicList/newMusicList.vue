@@ -38,6 +38,7 @@ const downloadConfirmDialogData = ref({"headerText":"ذخیره فایل","iconS
 
 import {storeToRefs} from "pinia";
 import {melodify} from "@/store";
+import thePlayer from "@/components/player/components/thePlayer.vue";
 const melodifyStore = melodify()
 const {
   playerData,playerTracks,musicListEditMode,playerSelectionMode
@@ -52,6 +53,9 @@ const {
     // })
     // $app.$refs.currentPointedList = this
   })
+const {
+  setPointedTrackID
+} = melodifyStore
 
    function goSelectionMode(item){
       if(!item.is_demo) {
@@ -80,10 +84,10 @@ const {
     // },
 function advButton(action) {
       if(this.$root.$refs.player.opened) {
-        this.$utils.limitAction('playerOpened',action)
+        $utils.limitAction('playerOpened',action)
       }
       else {
-        this.$utils.limitAction(null,action)
+        $utils.limitAction(null,action)
       }
     }
 function  er() {
@@ -93,16 +97,16 @@ function openAddtoPlaylistSheet() {
       this.$root.$refs.app.OpenAddToPlaylistSheet()
     }
 function  getCurrentTrackID(item) {
-      this.currentFocusedTrack = item
-      this.$store.dispatch('setPointedTrackID',item.id)
-      this.$root.$refs.currentPointedList = this
+      currentFocusedTrack.value = item
+      setPointedTrackID(item.id)
+      // this.$root.$refs.currentPointedList = this
     }
 
 function  playTrack(data, theData, index, query, queryParams, meta, from) {
-      this.$root.$refs.thePlayer.playItem(data, theData, index, query, queryParams, meta, from)
+      thePlayer.playItem(data, theData, index, query, queryParams, meta, from)
     }
 function   playInSelectMode(data, theData, index, query, queryParams, meta, from) {
-      this.$root.$refs.thePlayer.playItem(data, theData, index, query, queryParams, meta, from)
+      thePlayer.playItem(data, theData, index, query, queryParams, meta, from)
     }
 function  swipeFalse() {
       this.$root.$refs.player.swipeAble = false
@@ -307,6 +311,7 @@ function    removeTrack(index) {
                 @getCurrentTrackID="getCurrentTrackID"
                 @goSelectionMode="goSelectionMode(item)"
                 @checkItem="toggleCheck(item)"
+                @play-item="playTrack"
                 :ref="'trackItem'+index"
             ></track-item>
 <!--            <track-limit v-if="item.track_limit && item.track_limit.message" :item-data="item"></track-limit>-->
